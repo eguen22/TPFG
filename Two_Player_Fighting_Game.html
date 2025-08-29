@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Stick Fighter</title>
+
+    <style>
+
+        body {
+
+            margin: 0;
+
+            padding: 20px;
+
+            background: linear-gradient(to bottom, #1a1a2e, #16213e);
+
+            color: white;
+
+            font-family: Arial, sans-serif;
+
+            display: flex;
+
+            flex-direction: column;
+
+            align-items: center;
+
+            min-height: 100vh;
+
+        }
+
+
+
+        h1 {
+
+            margin-bottom: 10px;
+
+            text-shadow: 0 0 10px #00eeff;
+
+        }
+
+
+
+        .game-container {
+
+            position: relative;
+
+            margin: 20px 0;
+
+        }
+
+
+
+        #gameCanvas {
+
+            background: #0d0d1a;
+
+            border: 3px solid #00eeff;
+
+            border-radius: 5px;
+
+            box-shadow: 0 0 20px rgba(0, 238, 255, 0.3);
+
+        }
+
+
+
+        .controls {
+
+            display: flex;
+
+            justify-content: space-around;
+
+            width: 800px;
+
+            margin-top: 20px;
+
+        }
+
+
+
+        .player-controls {
+
+            background: rgba(0, 0, 0, 0.5);
+
+            padding: 15px;
+
+            border-radius: 10px;
+
+            text-align: center;
+
+            border: 2px solid #00eeff;
+
+        }
+
+
+
+        .player-controls h3 {
+
+            margin-top: 0;
+
+            color: #00eeff;
+
+        }
+
+
+
+        .keys {
+
+            display: grid;
+
+            grid-template-columns: repeat(3, 1fr);
+
+            grid-template-rows: repeat(3, 1fr);
+
+            gap: 5px;
+
+            width: 120px;
+
+            margin: 0 auto;
+
+        }
+
+
+
+        .key {
+
+            background: #333;
+
+            border: 1px solid #00eeff;
+
+            border-radius: 5px;
+
+            padding: 10px;
+
+            text-align: center;
+
+            font-weight: bold;
+
+        }
+
+
+
+        .key.attack {
+
+            background: #ff3333;
+
+        }
+
+
+
+        .winner {
+
+            position: absolute;
+
+            top: 50%;
+
+            left: 50%;
+
+            transform: translate(-50%, -50%);
+
+            font-size: 48px;
+
+            font-weight: bold;
+
+            color: #ff3333;
+
+            text-shadow: 0 0 10px #fff;
+
+            background: rgba(0, 0, 0, 0.7);
+
+            padding: 20px;
+
+            border-radius: 10px;
+
+            display: none;
+
+        }
+
+
+
+        .restart-btn {
+
+            margin-top: 20px;
+
+            padding: 10px 20px;
+
+            background: #00eeff;
+
+            color: #000;
+
+            border: none;
+
+            border-radius: 5px;
+
+            font-size: 18px;
+
+            cursor: pointer;
+
+            font-weight: bold;
+
+        }
+
+
+
+        .restart-btn:hover {
+
+            background: #00ccdd;
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <h1>Stick Fighter</h1>
+
+
+
+    <div class="game-container">
+
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+        <div class="winner" id="winnerDisplay"></div>
+
+    </div>
+
+
+
+    <div class="controls">
+
+        <div class="player-controls">
+
+            <h3>Player 1</h3>
+
+            <div class="keys">
+
+                <div></div>
+
+                <div class="key">W</div>
+
+                <div></div>
+
+                <div class="key">A</div>
+
+                <div class="key">S</div>
+
+                <div class="key">D</div>
+
+                <div></div>
+
+                <div class="key attack">F (Punch)</div>
+
+                <div></div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="player-controls">
+
+            <h3>Player 2</h3>
+
+            <div class="keys">
+
+                <div></div>
+
+                <div class="key">O</div>
+
+                <div></div>
+
+                <div class="key">K</div>
+
+                <div class="key">L</div>
+
+                <div></div>
+
+                <div></div>
+
+                <div class="key attack">J (Punch)</div>
+
+                <div></div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <button class="restart-btn" id="restartBtn">Restart Game</button>
+
+
+
+    <script>
+
+        // Game elements
+
+        const canvas = document.getElementById('gameCanvas');
+
+        const ctx = canvas.getContext('2d');
+
+        const winnerDisplay = document.getElementById('winnerDisplay');
+
+        const restartBtn = document.getElementById('restartBtn');
+
+
+
+        // Game state
+
+        let gameRunning = true;
+
+        let keys = {};
+
+
+
+        // Player class
+
+        class Player {
+
+            constructor(x, y, color, isPlayer1) {
+
+                this.x = x;
+
+                this.y = y;
+
+                this.width = 40;
+
+                this.height = 80;
+
+                this.color = color;
+
+                this.health = 100;
+
+                this.maxHealth = 100;
+
+                this.speed = 5;
+
+                this.isPlayer1 = isPlayer1;
+
+                this.punching = false;
+
+                this.punchCooldown = 0;
+
+                this.hitCooldown = 0;
+
+                this.facingRight = isPlayer1;
+
+            }
+
+
+
+            draw() {
+
+                // Draw body
+
+                ctx.fillStyle = this.color;
+
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+
+
+
+                // Draw head
+
+                ctx.beginPath();
+
+                ctx.arc(this.x + this.width/2, this.y - 15, 15, 0, Math.PI * 2);
+
+                ctx.fill();
+
+
+
+                // Draw arms
+
+                ctx.beginPath();
+
+                if (this.punching) {
+
+                    // Punching animation
+
+                    if (this.facingRight) {
+
+                        ctx.moveTo(this.x + this.width, this.y + 20);
+
+                        ctx.lineTo(this.x + this.width + 30, this.y + 15);
+
+                    } else {
+
+                        ctx.moveTo(this.x, this.y + 20);
+
+                        ctx.lineTo(this.x - 30, this.y + 15);
+
+                    }
+
+                } else {
+
+                    // Normal arms
+
+                    if (this.facingRight) {
+
+                        ctx.moveTo(this.x + this.width, this.y + 20);
+
+                        ctx.lineTo(this.x + this.width + 20, this.y + 15);
+
+                    } else {
+
+                        ctx.moveTo(this.x, this.y + 20);
+
+                        ctx.lineTo(this.x - 20, this.y + 15);
+
+                    }
+
+                }
+
+                ctx.lineWidth = 8;
+
+                ctx.stroke();
+
+
+
+                // Draw legs
+
+                ctx.beginPath();
+
+                ctx.moveTo(this.x + 10, this.y + this.height);
+
+                ctx.lineTo(this.x + 5, this.y + this.height + 30);
+
+                ctx.moveTo(this.x + this.width - 10, this.y + this.height);
+
+                ctx.lineTo(this.x + this.width - 5, this.y + this.height + 30);
+
+                ctx.lineWidth = 8;
+
+                ctx.stroke();
+
+
+
+                // Draw health bar
+
+                const barWidth = 100;
+
+                const barHeight = 10;
+
+                const barX = this.isPlayer1 ? 20 : canvas.width - barWidth - 20;
+
+                const barY = 20;
+
+
+
+                // Background
+
+                ctx.fillStyle = '#333';
+
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+
+
+
+                // Health
+
+                const healthWidth = (this.health / this.maxHealth) * barWidth;
+
+                ctx.fillStyle = this.health > 30 ? '#00ff00' : '#ff0000';
+
+                ctx.fillRect(barX, barY, healthWidth, barHeight);
+
+
+
+                // Border
+
+                ctx.strokeStyle = '#fff';
+
+                ctx.lineWidth = 1;
+
+                ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+            }
+
+
+
+            update() {
+
+                // Movement
+
+                if (this.isPlayer1) {
+
+                    if (keys['a'] || keys['A']) {
+
+                        this.x -= this.speed;
+
+                        this.facingRight = false;
+
+                    }
+
+                    if (keys['d'] || keys['D']) {
+
+                        this.x += this.speed;
+
+                        this.facingRight = true;
+
+                    }
+
+                } else {
+
+                    if (keys['k'] || keys['K']) {
+
+                        this.x -= this.speed;
+
+                        this.facingRight = false;
+
+                    }
+
+                    if (keys['l'] || keys['L']) {
+
+                        this.x += this.speed;
+
+                        this.facingRight = true;
+
+                    }
+
+                }
+
+
+
+                // Keep players within canvas bounds
+
+                this.x = Math.max(0, Math.min(canvas.width - this.width, this.x));
+
+
+
+                // Punching
+
+                if (this.punchCooldown > 0) {
+
+                    this.punchCooldown--;
+
+                }
+
+
+
+                if (this.hitCooldown > 0) {
+
+                    this.hitCooldown--;
+
+                }
+
+
+
+                // Reset punching animation after short duration
+
+                if (this.punching) {
+
+                    setTimeout(() => {
+
+                        this.punching = false;
+
+                    }, 100);
+
+                }
+
+            }
+
+
+
+            punch() {
+
+                if (this.punchCooldown === 0) {
+
+                    this.punching = true;
+
+                    this.punchCooldown = 20;
+
+                    return true;
+
+                }
+
+                return false;
+
+            }
+
+
+
+            takeDamage(amount) {
+
+                if (this.hitCooldown === 0) {
+
+                    this.health -= amount;
+
+                    this.hitCooldown = 30;
+
+                    if (this.health <= 0) {
+
+                        this.health = 0;
+
+                    }
+
+                    return true;
+
+                }
+
+                return false;
+
+            }
+
+        }
+
+
+
+        // Create players
+
+        const player1 = new Player(100, canvas.height - 120, '#ff5555', true);
+
+        const player2 = new Player(600, canvas.height - 120, '#5555ff', false);
+
+
+
+        // Check for collision between players
+
+        function checkCollision() {
+
+            const p1Right = player1.x + player1.width;
+
+            const p1Bottom = player1.y + player1.height;
+
+            const p2Right = player2.x + player2.width;
+
+            const p2Bottom = player2.y + player2.height;
+
+
+
+            return player1.x < p2Right &&
+
+                   p1Right > player2.x &&
+
+                   player1.y < p2Bottom &&
+
+                   p1Bottom > player2.y;
+
+        }
+
+
+
+        // Check if punch hits
+
+        function checkPunchHit(puncher, target) {
+
+            if (!puncher.punching) return false;
+
+
+
+            // Simple hit detection based on facing direction and proximity
+
+            const distance = Math.abs(puncher.x - target.x);
+
+            const heightDiff = Math.abs((puncher.y + puncher.height/2) - (target.y + target.height/2));
+
+
+
+            if (distance < 60 && heightDiff < 40) {
+
+                // Check if puncher is facing the target
+
+                if ((puncher.facingRight && puncher.x < target.x) ||
+
+                    (!puncher.facingRight && puncher.x > target.x)) {
+
+                    return target.takeDamage(10);
+
+                }
+
+            }
+
+            return false;
+
+        }
+
+
+
+        // Draw ground
+
+        function drawGround() {
+
+            ctx.fillStyle = '#444';
+
+            ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+
+
+
+            // Draw some details on the ground
+
+            ctx.fillStyle = '#333';
+
+            for (let i = 0; i < canvas.width; i += 40) {
+
+                ctx.fillRect(i, canvas.height - 40, 20, 5);
+
+            }
+
+        }
+
+
+
+        // Draw background
+
+        function drawBackground() {
+
+            // Sky gradient
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+
+            gradient.addColorStop(0, "#1a1a2e");
+
+            gradient.addColorStop(1, "#16213e");
+
+            ctx.fillStyle = gradient;
+
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+
+
+            // Stars
+
+            ctx.fillStyle = 'white';
+
+            for (let i = 0; i < 50; i++) {
+
+                const x = Math.random() * canvas.width;
+
+                const y = Math.random() * (canvas.height - 100);
+
+                const size = Math.random() * 2;
+
+                ctx.fillRect(x, y, size, size);
+
+            }
+
+        }
+
+
+
+        // Draw game
+
+        function draw() {
+
+            drawBackground();
+
+            drawGround();
+
+            player1.draw();
+
+            player2.draw();
+
+        }
+
+
+
+        // Update game state
+
+        function update() {
+
+            if (!gameRunning) return;
+
+
+
+            player1.update();
+
+            player2.update();
+
+
+
+            // Check for punches
+
+            if (keys['f'] || keys['F']) {
+
+                if (player1.punch()) {
+
+                    checkPunchHit(player1, player2);
+
+                }
+
+            }
+
+
+
+            if (keys['j'] || keys['J']) {
+
+                if (player2.punch()) {
+
+                    checkPunchHit(player2, player1);
+
+                }
+
+            }
+
+
+
+            // Check for game over
+
+            if (player1.health <= 0) {
+
+                showWinner("Player 2 Wins!");
+
+            } else if (player2.health <= 0) {
+
+                showWinner("Player 1 Wins!");
+
+            }
+
+        }
+
+
+
+        // Show winner
+
+        function showWinner(message) {
+
+            gameRunning = false;
+
+            winnerDisplay.textContent = message;
+
+            winnerDisplay.style.display = 'block';
+
+        }
+
+
+
+        // Reset game
+
+        function resetGame() {
+
+            player1.health = 100;
+
+            player2.health = 100;
+
+            player1.x = 100;
+
+            player2.x = 600;
+
+            player1.facingRight = true;
+
+            player2.facingRight = false;
+
+            gameRunning = true;
+
+            winnerDisplay.style.display = 'none';
+
+        }
+
+
+
+        // Game loop
+
+        function gameLoop() {
+
+            update();
+
+            draw();
+
+            requestAnimationFrame(gameLoop);
+
+        }
+
+
+
+        // Event listeners
+
+        window.addEventListener('keydown', (e) => {
+
+            keys[e.key] = true;
+
+        });
+
+
+
+        window.addEventListener('keyup', (e) => {
+
+            keys[e.key] = false;
+
+        });
+
+
+
+        restartBtn.addEventListener('click', resetGame);
+
+
+
+        // Start the game
+
+        resetGame();
+
+        gameLoop();
+
+    </script>
+
+</body>
+
+</html>
